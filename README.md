@@ -1,4 +1,3 @@
-```markdown
 # embedd-all
 
 `embedd-all` is a Python package designed to convert any Excel or PDF file into a format that can be used to create an embedding vector using embedding models. The package extracts text from PDFs and summarizes data from Excel files to prepare them for embedding.
