@@ -5,6 +5,7 @@ __pycache__/
 # Ignore virtual environment directories
 venv/
 .env/
+.envrc/
 
 # Other project-specific ignores
 .DS_Store

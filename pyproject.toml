@@ -1,23 +1,31 @@
 [project]
 name = "embedd-all"
-version = "0.0.1"
+version = "0.0.4"
+description = "Add your description here"
 authors = [
-  { name="Arnab", email="arnab.bhattacharya28122000@gmail.com" },
+    { name = "Arnab Bhattacharya", email = "53032587+Arnab28122000@users.noreply.github.com" }
 ]
-description = "A small example package"
-readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
-]
-
 dependencies = [
-    "openpyxl==3.1.5",
-    "pandas==2.2.2",
+    "openpyxl>=3.1.5",
+    "pandas>=2.2.2",
+    "langchain-community==0.2.2",
+    "langchain==0.2.2",
+    "pypdf==4.2.0",
 ]
+readme = "README.md"
+requires-python = ">= 3.8"
 
-[project.urls]
-Homepage = ""
-Issues = ""
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed = true
+universal = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/embedd_all"]

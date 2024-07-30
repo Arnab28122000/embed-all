@@ -1,5 +1,7 @@
 import openpyxl
 import pandas as pd
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 def find_column_row(df):
     final_index = None
@@ -57,16 +59,25 @@ def unmerge_and_populate(file_path, sheet_name):
     return df
 
 # Example usage
-# file_path = '/Users/arnabbhattachargya/Desktop/setu-product/UMAP_ Onboarding.xlsx'
+# file_path = '/Users/arnabbhattachargya/Desktop/data.xlsx'
 # sheet_name = 'Sheet4'
 # df = unmerge_and_populate(file_path, sheet_name)
 # print(df)
 
+def process_pdf(file_path):
+    # create a loader
+    loader = PyPDFLoader(file_path)
+    # load your data
+    data = loader.load()
+    # Split your data up into smaller documents with Chunks
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
+    documents = text_splitter.split_documents(data)
+    # Convert Document objects into strings
+    texts = [str(doc) for doc in documents]
+    return texts
 
 def modify_excel_for_embedding(file_path, context):
     dfs = []
-
-    file_path = '/Users/arnabbhattachargya/Desktop/setu-product/UMAP_ Onboarding.xlsx'
 
     xls = pd.ExcelFile(file_path)
     sheet_index = 0
