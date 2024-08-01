@@ -1,6 +1,6 @@
 [project]
 name = "embedd-all"
-version = "0.0.4"
+version = "0.0.5"
 description = "Add your description here"
 authors = [
     { name = "Arnab Bhattacharya", email = "53032587+Arnab28122000@users.noreply.github.com" }
@@ -11,6 +11,9 @@ dependencies = [
     "langchain-community==0.2.2",
     "langchain==0.2.2",
     "pypdf==4.2.0",
+    "pinecone>=5.0.0",
+    "anthropic>=0.32.0",
+    "voyageai>=0.2.3",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

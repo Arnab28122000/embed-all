@@ -6,6 +6,7 @@ __pycache__/
 venv/
 .env/
 .envrc/
+.envrc
 
 # Other project-specific ignores
 .DS_Store
