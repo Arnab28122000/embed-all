@@ -79,8 +79,7 @@ def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: st
                 "\n\n---\n\n".join(contexts) +
                 prompt_end
             )
-
-    print("Prompt Context: ", prompt)
+            
     message = client.messages.create(
         model=claude_model,
         max_tokens=700,
