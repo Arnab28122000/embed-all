@@ -10,3 +10,4 @@ venv/
 
 # Other project-specific ignores
 .DS_Store
+.envrc
