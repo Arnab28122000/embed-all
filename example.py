@@ -1,4 +1,4 @@
-from src.embedd_all.index import modify_excel_for_embedding, process_pdf
+from src.embedd_all.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai
 from src.embedd_all.rag_query import rag_and_query
 import os
 
@@ -6,7 +6,13 @@ ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 PINECONE_KEY = os.environ['PINECONE_KEY']
 VOYAGE_API_KEY = os.environ['VOYAGE_API_KEY']
 
-
+def create_rag_for_pdfs():
+    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf']
+    vector_db_name = 'arnab-test'
+    voyage_embed_model = 'voyage-2'
+    # dimensions of embed model
+    embed_dimension=1024
+    pinecone_embeddings_with_voyage_ai(paths, PINECONE_KEY, VOYAGE_API_KEY, vector_db_name, voyage_embed_model, embed_dimension)
 
 
 
@@ -14,11 +20,15 @@ def rag_query():
     CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
     #inddex name for pine_cone vector db
     INDEX_NAME = 'index_name'
+    TEMPERATURE = 0
+    MAX_TOKENS = 4000
     QUERY = 'How to configure UI'
     SYSTEM_PROMPT = "You are a world-class document writer. Respond only with detailed description and implementation. Use bullet points if neccessary"
     VOYAGE_EMBED_MODEL = 'voyage-2'
 
     resp = rag_and_query(
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
         anthropic_api_key=ANTHROPIC_API_KEY,
         claude_model=CLAUDE_MODEL, 
         index_name=INDEX_NAME, 
@@ -45,4 +55,5 @@ if __name__ == '__main__':
     # texts = process_pdf(file_path)
     # print("Text Length: ", len(texts))
     # print("Text process: ", texts)
-    rag_query()
+    # rag_query()
+    create_rag_for_pdfs()

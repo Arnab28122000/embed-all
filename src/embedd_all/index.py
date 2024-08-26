@@ -1,7 +1,16 @@
+import time
 import openpyxl
 import pandas as pd
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+import uuid
+from pinecone import Pinecone
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+from pinecone import ServerlessSpec
+from tqdm import tqdm
+import voyageai
 
 def find_column_row(df):
     final_index = None
@@ -63,6 +72,92 @@ def unmerge_and_populate(file_path, sheet_name):
 # sheet_name = 'Sheet4'
 # df = unmerge_and_populate(file_path, sheet_name)
 # print(df)
+
+def convert_to_embedding_metadata(texts, embeddings):
+    upsert_embeddings = []
+    index = 0
+    myuuid = uuid.uuid4()
+    for text in texts:
+        ob = {
+            "id": str(myuuid),
+            "values": embeddings[index],
+            "metadata" : {
+                "content": text
+            }
+        }
+        index = index + 1
+        upsert_embeddings.append(ob)
+    return upsert_embeddings
+
+# Define a function to create embeddings
+def create_embeddings_voyage(texts, voyage_api_key, VOYAGE_EMBED_MODEL):
+    vo = voyageai.Client(api_key=voyage_api_key)
+    embeddings_list = []
+
+    batch_size = 20
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        result = vo.embed(batch, model=VOYAGE_EMBED_MODEL, input_type="document")
+        embeddings_list.extend(result.embeddings)
+
+    # embeds = sum(embeddings_list, [])
+    return embeddings_list
+
+
+def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vector_db_name, voyage_embed_model, embed_dimension):
+    pc = Pinecone(api_key=pinecone_key)
+
+    cloud = 'aws'
+    region = 'us-east-1'
+
+    spec = ServerlessSpec(cloud=cloud, region=region)
+    VOYAGE_EMBED_MODEL = voyage_embed_model
+
+    print("Code is here 1")
+    index_name = vector_db_name
+    # check if index already exists (it shouldn't if this is first time)
+    if index_name not in pc.list_indexes().names():
+        # if does not exist, create index
+        pc.create_index(
+                index_name,
+                dimension=embed_dimension,
+                metric='cosine',
+                spec=spec
+        )
+        # wait for index to be initialized
+        while not pc.describe_index(index_name).status['ready']:
+            time.sleep(1)
+
+        # connect to index
+    pc_index = pc.Index(index_name)
+        # view index stats
+    pc_index.describe_index_stats()
+
+    base_path = ''
+
+        # Process a PDF and create embeddings
+    for path in paths:
+        file_path = base_path + path
+        print("PDF processing started ...", path)
+        texts = process_pdf(file_path)
+        print("PDF processing complete ...", path)
+
+        embeddings = create_embeddings_voyage(texts, voyage_api_key, VOYAGE_EMBED_MODEL)
+        print("Embeddings Length: ", len(embeddings))
+        print("PDF embedding complete ...", path)
+        upsert_embeds = convert_to_embedding_metadata(texts, embeddings)
+        print("Upsert Embed Length: ", len(upsert_embeds))
+        print("PDF embedding to pine cone started ...", path)
+        batch_size = 20
+        for i in range(0, len(upsert_embeds), batch_size):
+            batch = upsert_embeds[i:i+batch_size]
+            pc_index.upsert(vectors=batch)
+        
+        print("PDF embedding to pine cone complete ...", path)
+
+    print("Embedding Completed")
+
+
 
 def process_pdf(file_path):
     # create a loader

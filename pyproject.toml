@@ -1,7 +1,7 @@
 [project]
 name = "embedd-all"
-version = "0.0.5"
-description = "Add your description here"
+version = "0.0.921"
+description = "Embedd (docs, pdfs, excels, csv etc) -> RAG -> Query with LLMs"
 authors = [
     { name = "Arnab Bhattacharya", email = "53032587+Arnab28122000@users.noreply.github.com" }
 ]
@@ -13,8 +13,7 @@ dependencies = [
     "pypdf==4.2.0",
     "pinecone>=5.0.0",
     "anthropic>=0.32.0",
-    "voyageai>=0.2.3",
-    "langchain-cli>=0.0.28",
+    "voyageai>=0.2.3"
 ]
 readme = "README.md"
 requires-python = ">= 3.8"

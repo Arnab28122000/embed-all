@@ -3,7 +3,7 @@ import anthropic
 import time
 from pinecone import Pinecone, ServerlessSpec
 
-def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: str, index_name: str, anthropic_api_key: str, system_prompt: str, claude_model: str, query: str) -> str:
+def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: str, index_name: str, anthropic_api_key: str, system_prompt: str, claude_model: str, query: str, max_tokens: int, temperature: float) -> str:
     
     pinecone_key = pinecone_key
     voyage_api_key = voyage_api_key
@@ -79,11 +79,11 @@ def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: st
                 "\n\n---\n\n".join(contexts) +
                 prompt_end
             )
-            
+
     message = client.messages.create(
         model=claude_model,
-        max_tokens=700,
-        temperature=0,
+        max_tokens=max_tokens,
+        temperature=temperature,
         system=system_prompt,
         messages=[
             {
