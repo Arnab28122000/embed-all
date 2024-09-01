@@ -1,9 +1,12 @@
 [project]
 name = "embedd-all"
-version = "0.0.921"
+version = "0.0.923"
 description = "Embedd (docs, pdfs, excels, csv etc) -> RAG -> Query with LLMs"
 authors = [
-    { name = "Arnab Bhattacharya", email = "53032587+Arnab28122000@users.noreply.github.com" }
+    { name = "Arnab Bhattacharya", email = "arnab.bhattacharya28122000@gmail.com" }
+]
+maintainers = [
+    { name = "Arnab Bhattacharya", email = "arnab.bhattacharya28122000@gmail.com" }
 ]
 dependencies = [
     "openpyxl>=3.1.5",
@@ -17,6 +20,13 @@ dependencies = [
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
+
+
+[project.urls]
+Homepage = "https://github.com/Arnab28122000/embed-all"
+Repository = "https://github.com/Arnab28122000/embed-all"
+"Bug Tracker" = "https://github.com/Arnab28122000/embed-all/issues"
+Documentation = "https://github.com/Arnab28122000/embed-all/blob/main/README.md"
 
 [build-system]
 requires = ["hatchling"]

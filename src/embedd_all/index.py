@@ -10,7 +10,26 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from pinecone import ServerlessSpec
 from tqdm import tqdm
+import os
 import voyageai
+from enum import Enum
+
+
+class FileType(Enum):
+    PDF = 'PDF'
+    XLSX = 'XLSX'
+    CSV = 'CSV'
+
+def check_file_type(filepath):
+    _, file_extension = os.path.splitext(filepath)
+    if file_extension.lower() == '.pdf':
+        return "PDF"
+    elif file_extension.lower() == '.xlsx':
+        return "XLSX"
+    elif file_extension.lower() == '.csv':
+        return "CSV"
+    else:
+        return "Unknown format"
 
 def find_column_row(df):
     final_index = None
@@ -67,12 +86,6 @@ def unmerge_and_populate(file_path, sheet_name):
     df = pd.read_excel(file_path, sheet_name=sheet_name)
     return df
 
-# Example usage
-# file_path = '/Users/arnabbhattachargya/Desktop/data.xlsx'
-# sheet_name = 'Sheet4'
-# df = unmerge_and_populate(file_path, sheet_name)
-# print(df)
-
 def convert_to_embedding_metadata(texts, embeddings):
     upsert_embeddings = []
     index = 0
@@ -113,7 +126,6 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
     spec = ServerlessSpec(cloud=cloud, region=region)
     VOYAGE_EMBED_MODEL = voyage_embed_model
 
-    print("Code is here 1")
     index_name = vector_db_name
     # check if index already exists (it shouldn't if this is first time)
     if index_name not in pc.list_indexes().names():
@@ -135,29 +147,50 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
 
     base_path = ''
 
-        # Process a PDF and create embeddings
     for path in paths:
+        file_type = check_file_type(path)
         file_path = base_path + path
-        print("PDF processing started ...", path)
-        texts = process_pdf(file_path)
-        print("PDF processing complete ...", path)
+        print("File Type: ", file_type)
+        print("File Type: ", file_type == "XLSX")
+        texts = []
+
+        if file_type == "PDF":
+            print("PDF processing started ...", path)
+            texts = process_pdf(file_path)
+            print("PDF processing complete ...", path)
+
+        if file_type == "XLSX":
+            context = "data"
+            print("EXCEL processing started ...", path)
+            dfs = modify_excel_for_embedding(file_path=file_path, context=context)
+            texts = [text for df in dfs for text in df]
+            print("EXCEL processing complete ...", path)
+        
+        if file_type == "CSV":
+            print("CSV processing started ...", path)
+            context = "data"
+            dfs = modify_csv_for_embedding(file_path=file_path, context=context)
+            texts = [text for df in dfs for text in df]
+            print("CSV processing complete ...", path)
+
+        if not texts:
+            print(f"No texts extracted from {path}. Skipping embedding process.")
+            continue
 
         embeddings = create_embeddings_voyage(texts, voyage_api_key, VOYAGE_EMBED_MODEL)
         print("Embeddings Length: ", len(embeddings))
-        print("PDF embedding complete ...", path)
+        print("Embedding complete ...", path)
         upsert_embeds = convert_to_embedding_metadata(texts, embeddings)
         print("Upsert Embed Length: ", len(upsert_embeds))
-        print("PDF embedding to pine cone started ...", path)
+        print("Embedding to pine cone started ...", path)
         batch_size = 20
         for i in range(0, len(upsert_embeds), batch_size):
             batch = upsert_embeds[i:i+batch_size]
             pc_index.upsert(vectors=batch)
         
-        print("PDF embedding to pine cone complete ...", path)
+        print("Embedding to pine cone complete ...", path)
 
     print("Embedding Completed")
-
-
 
 def process_pdf(file_path):
     # create a loader
@@ -175,18 +208,15 @@ def modify_excel_for_embedding(file_path, context):
     dfs = []
 
     xls = pd.ExcelFile(file_path)
-    sheet_index = 0
     sheet_names = xls.sheet_names
     print("Sheet names:", sheet_names)
-    for sheet in sheet_names:
-        sheet_index = sheet_index + 1
-        # df = pd.read_excel(file_path, sheet_name=sheet)
+    
+    for sheet_index, sheet in enumerate(sheet_names, 1):
         df = unmerge_and_populate(file_path, sheet)
 
         # Find the row with column names
         column_row_index, column_names = find_column_row(df)
         if column_row_index is not None:
-            # print(f"Column row found at index: {column_row_index}")
             print(f"Column names: {column_names}")
         else:
             print("No valid column row found.")
@@ -199,29 +229,66 @@ def modify_excel_for_embedding(file_path, context):
             df = df.drop(range(column_row_index + 1)).reset_index(drop=True)
             
             # Drop columns starting with "Unnamed: "
-            df = df.loc[:, ~df.columns.str.contains('Unnamed: ')]
+            df = df.loc[:, ~df.columns.astype(str).str.contains('Unnamed: ')]
 
-        columns = column_names
+        columns = df.columns.tolist()
 
         # Initialize the "summarized" column
         df["summarized"] = ""
 
-        columns = df.columns
-
         # Iterate through each row to summarize the data
         for index, row in df.iterrows():
-            summary = ""
+            summary = []
             
             for col in columns:
-                summary += col + ": " + str(row[col]).strip() + "; "
+                value = row[col]
+                if pd.notna(value):  # Only include non-null values
+                    summary.append(f"{col}: {str(value).strip()}")
             
-            if len(sheet_names) > 0:
-                summary =  sheet + '/' + summary
-            df.at[index, "summarized"] = context + '/' + summary
+            summary_str = "; ".join(summary)
+            if sheet_names:
+                summary_str = f"{sheet}/{summary_str}"
+            df.at[index, "summarized"] = f"{context}/{summary_str}"
 
-        # print("Processed Dataframe: ", df["summarized"])
         dfs.append(df["summarized"])
-        print("Processed Sheet :", sheet_index)
+        print(f"Processed Sheet: {sheet_index}")
 
     return dfs
 
+def modify_csv_for_embedding(file_path, context):
+    # Read the CSV file
+    df = pd.read_csv(file_path, header=None)
+    # Find the row with column names
+    column_row_index, column_names = find_column_row(df)
+    if column_row_index is not None:
+        print(f"Column names: {column_names}")
+    else:
+        print("No valid column row found.")
+        return []
+
+    # Set the column names and drop the rows above it
+    df.columns = column_names
+    df = df.iloc[column_row_index + 1:].reset_index(drop=True)
+    
+    # Drop columns starting with "Unnamed: "
+    df = df.loc[:, ~df.columns.astype(str).str.contains('Unnamed: ')]
+
+    columns = df.columns.tolist()
+
+    # Initialize the "summarized" column
+    df["summarized"] = ""
+
+    # Iterate through each row to summarize the data
+    for index, row in df.iterrows():
+        summary = []
+        
+        for col in columns:
+            value = row[col]
+            if pd.notna(value):  # Only include non-null values
+                summary.append(f"{col}: {str(value).strip()}")
+        
+        summary_str = "; ".join(summary)
+        df.at[index, "summarized"] = f"{context}/{summary_str}"
+
+    print(f"Processed CSV file")
+    return [df["summarized"]]

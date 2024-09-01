@@ -98,3 +98,32 @@ def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: st
         ]
     )
     return message.content
+
+
+def context_and_query(anthropic_api_key: str, system_prompt: str, claude_model: str, query: str, max_tokens: int, temperature: float, context: str) -> str:
+    query = query
+
+    ANTHROPIC_API_KEY= anthropic_api_key
+
+    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+    prompt = "Question: " + query + " \n Context: " + context + '\n Note: Make sure that if Question is not relevant to the given Context do not answer. Say this question is out of scope'
+
+    message = client.messages.create(
+        model=claude_model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        system=system_prompt,
+        messages=[
+            {
+                "role": "user", 
+                "content": [
+                    {
+                        "type": "text",
+                        "text": prompt
+                    }   
+                ]
+            }
+        ]
+    )
+    return message.content

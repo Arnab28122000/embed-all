@@ -1,18 +1,30 @@
-from src.embedd_all.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai
-from src.embedd_all.rag_query import rag_and_query
+from src.embedd_all.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
+from src.embedd_all.rag_query import rag_and_query, context_and_query
 import os
 
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 PINECONE_KEY = os.environ['PINECONE_KEY']
 VOYAGE_API_KEY = os.environ['VOYAGE_API_KEY']
 
-def create_rag_for_pdfs():
-    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf']
+def create_rag_for_pdfs_excels_csvs():
+    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Downloads/file_example_XLS_10.xlsx', '/Users/arnabbhattachargya/Downloads/currency.csv']
     vector_db_name = 'arnab-test'
     voyage_embed_model = 'voyage-2'
     # dimensions of embed model
     embed_dimension=1024
     pinecone_embeddings_with_voyage_ai(paths, PINECONE_KEY, VOYAGE_API_KEY, vector_db_name, voyage_embed_model, embed_dimension)
+
+def query_with_context():
+    CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
+    SYSTEM_PROMPT = "You are a world-class medicine expert. Respond only with detailed information"
+    TEMPERATURE = 0
+    MAX_TOKENS = 4000
+    QUERY = 'what medications to take when we feel sick'
+    CONTEXT = """
+       Medicine related context
+    """
+    answer = context_and_query(ANTHROPIC_API_KEY, SYSTEM_PROMPT, CLAUDE_MODEL, QUERY, MAX_TOKENS, TEMPERATURE, CONTEXT)
+    print(answer)
 
 
 
@@ -44,16 +56,22 @@ def rag_query():
     for text_block in resp:
         print(text_block.text)
 
+
 if __name__ == '__main__':
     # Example usage
-    # file_path = '/Users/arnabbhattachargya/Desktop/data.xlsx'
-    # file_path = '/Users/arnabbhattachargya/Desktop/setu-product/UMAP.pdf'
+    # file_path = '/Users/arnabbhattachargya/Downloads/currency.csv'
     # context = "data"
     # dfs = modify_excel_for_embedding(file_path=file_path, context=context)
-    # print(dfs[2].head(3))
+    # print(dfs[0][0])
 
     # texts = process_pdf(file_path)
     # print("Text Length: ", len(texts))
     # print("Text process: ", texts)
     # rag_query()
-    create_rag_for_pdfs()
+    # dfs = modify_csv_for_embedding(file_path, context)
+    # texts = [text for df in dfs for text in df]
+    # print("Length: ", len(texts))
+    # print(df[0][0])
+    create_rag_for_pdfs_excels_csvs()
+    # create_rag_for_pdfs()
+    # query_with_context()
