@@ -85,6 +85,8 @@ langsmith==0.1.94
     # via langchain
     # via langchain-community
     # via langchain-core
+lxml==5.3.0
+    # via python-docx
 marshmallow==3.21.3
     # via dataclasses-json
 multidict==6.0.5
@@ -128,6 +130,8 @@ pypdf==4.2.0
     # via embedd-all
 python-dateutil==2.9.0.post0
     # via pandas
+python-docx==1.1.2
+    # via embedd-all
 pytz==2024.1
     # via pandas
 pyyaml==6.0.1
@@ -166,6 +170,7 @@ typing-extensions==4.12.2
     # via pinecone-client
     # via pydantic
     # via pydantic-core
+    # via python-docx
     # via sqlalchemy
     # via typing-inspect
 typing-inspect==0.9.0

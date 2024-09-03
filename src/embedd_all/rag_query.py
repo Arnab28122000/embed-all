@@ -13,6 +13,8 @@ def rag_and_query(pinecone_key: str, voyage_api_key: str, voyage_embed_model: st
 
     query = query
 
+    prompt = query
+
     result = vo.embed(texts=[query], model=VOYAGE_EMBED_MODEL, input_type="document")
 
     index_name = index_name

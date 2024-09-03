@@ -13,6 +13,8 @@ from tqdm import tqdm
 import os
 import voyageai
 from enum import Enum
+from src.core.logger import logger
+from docx import Document
 
 
 class FileType(Enum):
@@ -28,6 +30,8 @@ def check_file_type(filepath):
         return "XLSX"
     elif file_extension.lower() == '.csv':
         return "CSV"
+    elif file_extension.lower() == '.doc' or file_extension.lower() == '.docx':
+        return "DOC"
     else:
         return "Unknown format"
 
@@ -150,47 +154,51 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
     for path in paths:
         file_type = check_file_type(path)
         file_path = base_path + path
-        print("File Type: ", file_type)
-        print("File Type: ", file_type == "XLSX")
         texts = []
 
         if file_type == "PDF":
-            print("PDF processing started ...", path)
+            logger.info(f"PDF processing started ... {path}")
             texts = process_pdf(file_path)
-            print("PDF processing complete ...", path)
+            logger.info(f"PDF processing complete ... {path}")
 
         if file_type == "XLSX":
             context = "data"
-            print("EXCEL processing started ...", path)
+            logger.info(f"EXCEL processing started ... {path}")
             dfs = modify_excel_for_embedding(file_path=file_path, context=context)
             texts = [text for df in dfs for text in df]
-            print("EXCEL processing complete ...", path)
+            logger.info(f"EXCEL processing complete ... {path}")
         
         if file_type == "CSV":
-            print("CSV processing started ...", path)
+            logger.info(f"CSV processing started ... {path}")
             context = "data"
             dfs = modify_csv_for_embedding(file_path=file_path, context=context)
             texts = [text for df in dfs for text in df]
-            print("CSV processing complete ...", path)
+            logger.info("fCSV processing complete ... {path}")
+
+        if file_type == "DOC":
+            logger.info(f"DOC processing started ... {path}")
+            texts = read_docx_as_pages(file_path)
+            logger.info(f"DOC processing complete ... {path}")
 
         if not texts:
-            print(f"No texts extracted from {path}. Skipping embedding process.")
+            logger.info(f"No texts extracted from {path}. Skipping embedding process.")
             continue
 
         embeddings = create_embeddings_voyage(texts, voyage_api_key, VOYAGE_EMBED_MODEL)
-        print("Embeddings Length: ", len(embeddings))
-        print("Embedding complete ...", path)
+        logger.info(f"Embeddings Length: {len(embeddings)}")
+        logger.info(f"Embedding complete ... {path}")
         upsert_embeds = convert_to_embedding_metadata(texts, embeddings)
-        print("Upsert Embed Length: ", len(upsert_embeds))
-        print("Embedding to pine cone started ...", path)
-        batch_size = 20
-        for i in range(0, len(upsert_embeds), batch_size):
+        logger.info(f"Upsert Embed Length: {len(upsert_embeds)}")
+        logger.info(f"Embedding to pine cone started ... {path}")
+        batch_size = 5
+        # Wrap the range in tqdm for progress tracking
+        for i in tqdm(range(0, len(upsert_embeds), batch_size), desc="Upserting batches", unit="batch"):
             batch = upsert_embeds[i:i+batch_size]
             pc_index.upsert(vectors=batch)
         
-        print("Embedding to pine cone complete ...", path)
+        logger.info(f"Embedding to pine cone complete ... {path}")
 
-    print("Embedding Completed")
+    logger.info(f"Embedding Completed")
 
 def process_pdf(file_path):
     # create a loader
@@ -209,7 +217,7 @@ def modify_excel_for_embedding(file_path, context):
 
     xls = pd.ExcelFile(file_path)
     sheet_names = xls.sheet_names
-    print("Sheet names:", sheet_names)
+    logger.info(f"Sheet names: {sheet_names}")
     
     for sheet_index, sheet in enumerate(sheet_names, 1):
         df = unmerge_and_populate(file_path, sheet)
@@ -217,9 +225,9 @@ def modify_excel_for_embedding(file_path, context):
         # Find the row with column names
         column_row_index, column_names = find_column_row(df)
         if column_row_index is not None:
-            print(f"Column names: {column_names}")
+            logger.info(f"Column names: {column_names}")
         else:
-            print("No valid column row found.")
+            logger.info("No valid column row found.")
 
         # If column names are found, set the column names and drop the rows above it
         if column_row_index is not None:
@@ -251,7 +259,7 @@ def modify_excel_for_embedding(file_path, context):
             df.at[index, "summarized"] = f"{context}/{summary_str}"
 
         dfs.append(df["summarized"])
-        print(f"Processed Sheet: {sheet_index}")
+        logger.info(f"Processed Sheet: {sheet_index}")
 
     return dfs
 
@@ -261,9 +269,9 @@ def modify_csv_for_embedding(file_path, context):
     # Find the row with column names
     column_row_index, column_names = find_column_row(df)
     if column_row_index is not None:
-        print(f"Column names: {column_names}")
+        logger.info(f"Column names: {column_names}")
     else:
-        print("No valid column row found.")
+        logger.info("No valid column row found.")
         return []
 
     # Set the column names and drop the rows above it
@@ -290,5 +298,29 @@ def modify_csv_for_embedding(file_path, context):
         summary_str = "; ".join(summary)
         df.at[index, "summarized"] = f"{context}/{summary_str}"
 
-    print(f"Processed CSV file")
+    logger.info(f"Processed CSV file")
     return [df["summarized"]]
+
+
+def read_docx_as_pages(file_path):
+    # Open the .docx file
+    doc = Document(file_path)
+
+    # Initialize an empty list to hold the text "pages"
+    pages = []
+    
+    # Iterate over each paragraph and group them into "pages"
+    current_page = []
+    for para in doc.paragraphs:
+        current_page.append(para.text)
+        
+        # Treat every 23 paragraphs as a new "page" (adjust as needed)
+        if len(current_page) >= 23:
+            pages.append("\n".join(current_page))
+            current_page = []
+
+    # Append any remaining paragraphs as the last "page"
+    if current_page:
+        pages.append("\n".join(current_page))
+
+    return pages

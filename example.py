@@ -7,7 +7,7 @@ PINECONE_KEY = os.environ['PINECONE_KEY']
 VOYAGE_API_KEY = os.environ['VOYAGE_API_KEY']
 
 def create_rag_for_pdfs_excels_csvs():
-    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Downloads/file_example_XLS_10.xlsx', '/Users/arnabbhattachargya/Downloads/currency.csv']
+    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx', '/Users/arnabbhattachargya/Downloads/flamingo book.docx']
     vector_db_name = 'arnab-test'
     voyage_embed_model = 'voyage-2'
     # dimensions of embed model
@@ -31,10 +31,10 @@ def query_with_context():
 def rag_query():
     CLAUDE_MODEL = "claude-3-5-sonnet-20240620"
     #inddex name for pine_cone vector db
-    INDEX_NAME = 'index_name'
+    INDEX_NAME = 'arnab-test'
     TEMPERATURE = 0
     MAX_TOKENS = 4000
-    QUERY = 'How to configure UI'
+    QUERY = 'what all fuel types are there is cars?'
     SYSTEM_PROMPT = "You are a world-class document writer. Respond only with detailed description and implementation. Use bullet points if neccessary"
     VOYAGE_EMBED_MODEL = 'voyage-2'
 
