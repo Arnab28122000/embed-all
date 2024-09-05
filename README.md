@@ -33,7 +33,7 @@ The `modify_excel_for_embedding` function processes an Excel file, summarizes ea
 
 ```python
 import pandas as pd
-from embedd_all.index import modify_excel_for_embedding
+from embedd_all.embedd.index import modify_excel_for_embedding
 
 if __name__ == '__main__':
     # Path to the Excel file
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 The `process_pdf` function extracts text from each page of a PDF file and returns it as an array.
 
 ```python
-from embedd_all.index import process_pdf
+from embedd_all.embedd.index import process_pdf
 
 if __name__ == '__main__':
     # Path to the PDF file
@@ -72,7 +72,7 @@ if __name__ == '__main__':
 The `pinecone_embeddings_with_voyage_ai` function creates RAG for documents using Voyage AI embedding models and stores them in a Pinecone vector database. This function supports multiple file formats including xlsx, csv, pdf, doc, and docx.
 
 ```python
-from embedd_all.index import pinecone_embeddings_with_voyage_ai
+from embedd_all.embedd.index import pinecone_embeddings_with_voyage_ai
 
 def create_rag_for_documents():
     paths = [
@@ -93,7 +93,7 @@ if __name__ == '__main__':
 The `rag_query` function performs context-based querying using RAG (Retrieval-Augmented Generation).
 
 ```python
-from embedd_all.index import rag_query
+from embedd_all.embedd.index import rag_query
 
 def execute_rag_query():
     CLAUDE_MODEL = "claude-3-5-sonnet-20240620"

@@ -126,6 +126,8 @@ pydantic==2.8.2
     # via langsmith
 pydantic-core==2.20.1
     # via pydantic
+pypandoc-binary==1.13
+    # via embedd-all
 pypdf==4.2.0
     # via embedd-all
 python-dateutil==2.9.0.post0

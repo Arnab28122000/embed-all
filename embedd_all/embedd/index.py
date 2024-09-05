@@ -11,9 +11,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pinecone import ServerlessSpec
 from tqdm import tqdm
 import os
+import json
 import voyageai
 from enum import Enum
-from src.core.logger import logger
+from embedd_all.core.logger import logger
 from docx import Document
 
 
@@ -30,10 +31,23 @@ def check_file_type(filepath):
         return "XLSX"
     elif file_extension.lower() == '.csv':
         return "CSV"
-    elif file_extension.lower() == '.doc' or file_extension.lower() == '.docx':
-        return "DOC"
+    elif file_extension.lower() == '.docx':
+        return "DOCX"
     else:
         return "Unknown format"
+    
+def check_metadata_size(metadata, limit=8000):
+    """
+    Check if metadata size exceeds a specified limit.
+    
+    :param metadata: Metadata to be checked.
+    :param limit: Size limit in bytes.
+    :return: Boolean indicating whether metadata size exceeds the limit.
+    """
+    metadata_size = len(json.dumps(metadata).encode('utf-8'))
+    return metadata_size > limit
+
+
 
 def find_column_row(df):
     final_index = None
@@ -175,10 +189,10 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
             texts = [text for df in dfs for text in df]
             logger.info("fCSV processing complete ... {path}")
 
-        if file_type == "DOC":
-            logger.info(f"DOC processing started ... {path}")
+        if file_type == "DOCX":
+            logger.info(f"DOCX processing started ... {path}")
             texts = read_docx_as_pages(file_path)
-            logger.info(f"DOC processing complete ... {path}")
+            logger.info(f"DOCX processing complete ... {path}")
 
         if not texts:
             logger.info(f"No texts extracted from {path}. Skipping embedding process.")
@@ -313,9 +327,13 @@ def read_docx_as_pages(file_path):
     current_page = []
     for para in doc.paragraphs:
         current_page.append(para.text)
+
+        # if check_metadata_size("\n".join(current_page), size_limit):
+        #     pages.append("\n".join(current_page[:-1]))
+        #     current_page = [current_page[-1]]
         
         # Treat every 23 paragraphs as a new "page" (adjust as needed)
-        if len(current_page) >= 23:
+        if len(current_page) >= 1:
             pages.append("\n".join(current_page))
             current_page = []
 

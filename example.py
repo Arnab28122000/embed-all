@@ -1,5 +1,5 @@
-from src.embedd_all.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
-from src.embedd_all.rag_query import rag_and_query, context_and_query
+from embedd_all.embedd.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
+from embedd_all.embedd.rag_query import rag_and_query, context_and_query
 import os
 
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
@@ -7,7 +7,8 @@ PINECONE_KEY = os.environ['PINECONE_KEY']
 VOYAGE_API_KEY = os.environ['VOYAGE_API_KEY']
 
 def create_rag_for_pdfs_excels_csvs():
-    paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx', '/Users/arnabbhattachargya/Downloads/flamingo book.docx']
+    # paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx', '/Users/arnabbhattachargya/Downloads/flamingo book.docx']
+    paths = ['/Users/arnabbhattachargya/Downloads/RPD+Internal+FAQ.doc', '/Users/arnabbhattachargya/Downloads/flamingo book.docx', '/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx']
     vector_db_name = 'arnab-test'
     voyage_embed_model = 'voyage-2'
     # dimensions of embed model
