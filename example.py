@@ -1,5 +1,5 @@
 from embedd_all.embedd.index import convert_files_to_context, modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
-from embedd_all.embedd.rag_query import context_and_query_model, rag_and_query, context_and_query
+from embedd_all.embedd.rag_query import context_and_query_model, rag_and_query, context_and_query, rag_and_query_openai
 import os
 
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']

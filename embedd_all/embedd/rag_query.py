@@ -113,15 +113,14 @@ def rag_and_query_openai(
     query: str, 
     max_tokens: int, 
     temperature: float,
-    embed_dimension: int = 1536,  # Default for text-embedding-3-small
-    chat_history: list = None  # List of previous messages
+    embed_dimension: int = 1536  # Default for text-embedding-3-small
 ) -> str:
     """
     Perform RAG query using OpenAI's embedding and chat completion models
     
     Args:
         pinecone_key: Pinecone API key
-        openai_api_key: OpenAI API key 
+        openai_api_key: OpenAI API key
         openai_embed_model: OpenAI embedding model name
         openai_chat_model: OpenAI chat completion model name
         index_name: Pinecone index name
@@ -130,8 +129,8 @@ def rag_and_query_openai(
         max_tokens: Maximum tokens for response
         temperature: Temperature for response generation
         embed_dimension: Embedding dimension (depends on model)
-        chat_history: List of previous messages in format [{"role": "user"/"assistant", "content": "msg"}]
     """
+    from openai import OpenAI
     
     # Initialize OpenAI client
     client = OpenAI(api_key=openai_api_key)
@@ -178,20 +177,13 @@ def rag_and_query_openai(
         f"\n\nQuestion: {query}\nAnswer:"
     )
 
-    # Initialize messages with system prompt
-    messages = [{"role": "system", "content": system_prompt}]
-    
-    # Add chat history if provided
-    if chat_history:
-        messages.extend(chat_history)
-        
-    # Add current query
-    messages.append({"role": "user", "content": prompt})
-
     # Get completion from OpenAI
     completion = client.chat.completions.create(
         model=openai_chat_model,
-        messages=messages,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ],
         max_tokens=max_tokens,
         temperature=temperature
     )

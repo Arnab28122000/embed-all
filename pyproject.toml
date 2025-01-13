@@ -1,6 +1,6 @@
 [project]
 name = "embedd-all"
-version = "0.0.938"
+version = "0.0.939"
 description = "Embedd (docs, pdfs, excels, csv etc) -> RAG -> Query with LLMs"
 authors = [
     { name = "Arnab Bhattacharya", email = "arnab.bhattacharya28122000@gmail.com" }
@@ -33,7 +33,7 @@ Repository = "https://github.com/Arnab28122000/embed-all"
 Documentation = "https://github.com/Arnab28122000/embed-all/blob/main/README.md"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.26.3"]
 build-backend = "hatchling.build"
 
 [tool.rye]
@@ -42,6 +42,9 @@ universal = true
 dev-dependencies = []
 
 [tool.hatch.metadata]
+name = "embedd-all"
+version = "0.0.939"
+description = "Embedd (docs, pdfs, excels, csv etc) -> RAG -> Query with LLMs"
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]

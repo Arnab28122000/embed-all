@@ -1,13 +1,14 @@
 # embedd-all
 
-`embedd-all` is a Python package designed to convert various document formats into a format that can be used to create an embedding vector using embedding models. The package extracts text from PDFs, summarizes data from Excel files, and now includes functionality to create RAG (Retrieval-Augmented Generation) for documents using Voyage AI embedding models and Pinecone vector database. It supports file formats including xlsx, csv, pdf, doc, and docx.
+`embedd-all` is a Python package designed to convert various document formats into a format that can be used to create an embedding vector using embedding models. The package extracts text from PDFs, summarizes data from Excel files, and now includes functionality to create RAG (Retrieval-Augmented Generation) for documents using Voyage AI or OpenAI embedding models and Pinecone vector database. It supports file formats including xlsx, csv, pdf, doc, and docx.
 
 ## Features
 
 - **Multi-format Support**: Supports PDF, Excel (xlsx, csv), and Word (doc, docx) file processing.
 - **PDF Processing**: Extracts text from each page of a PDF and returns it as an array.
 - **Excel Processing**: Summarizes the data in each sheet by concatenating column names and their respective values, creating a new column `df["summarized"]`. If the Excel file contains multiple sheets, it processes each sheet and returns all summaries.
-- **RAG Creation**: Creates RAG for documents (all supported formats) using Voyage AI embedding models and stores them in a Pinecone vector database.
+- **RAG Creation**: Creates RAG for documents (all supported formats) using either Voyage AI or OpenAI embedding models and stores them in a Pinecone vector database.
+- **Multiple Embedding Models**: Supports both Voyage AI and OpenAI embedding models for flexible integration.
 
 ## Installation
 
@@ -69,10 +70,10 @@ if __name__ == '__main__':
 
 #### Creating RAG for Documents
 
-The `pinecone_embeddings_with_voyage_ai` function creates RAG for documents using Voyage AI embedding models and stores them in a Pinecone vector database. This function supports multiple file formats including xlsx, csv, pdf, doc, and docx.
+The `pinecone_embeddings_with_voyage_ai` or `pinecone_embeddings_with_openai` function creates RAG for documents using your preferred embedding model and stores them in a Pinecone vector database. This function supports multiple file formats including xlsx, csv, pdf, doc, and docx.
 
 ```python
-from embedd_all.embedd.index import pinecone_embeddings_with_voyage_ai
+from embedd_all.embedd.index import pinecone_embeddings_with_voyage_ai, pinecone_embeddings_with_openai
 
 def create_rag_for_documents():
     paths = [
@@ -80,9 +81,16 @@ def create_rag_for_documents():
         '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx'
     ]
     vector_db_name = 'arnab-test'
+    
+    # Using Voyage AI
     voyage_embed_model = 'voyage-2'
     embed_dimension = 1024
     pinecone_embeddings_with_voyage_ai(paths, PINECONE_KEY, VOYAGE_API_KEY, vector_db_name, voyage_embed_model, embed_dimension)
+    
+    # Using OpenAI
+    openai_embed_model = 'text-embedding-3-small'  # or 'text-embedding-3-large'
+    embed_dimension = 1536  # 1536 for small, 3072 for large
+    pinecone_embeddings_with_openai(paths, PINECONE_KEY, OPENAI_API_KEY, vector_db_name, openai_embed_model, embed_dimension)
 
 if __name__ == '__main__':
     create_rag_for_documents()
@@ -90,7 +98,7 @@ if __name__ == '__main__':
 
 #### Querying with RAG
 
-The `rag_query` function performs context-based querying using RAG (Retrieval-Augmented Generation).
+The `rag_query` function performs context-based querying using RAG (Retrieval-Augmented Generation). You can use either Voyage AI or OpenAI embeddings for querying.
 
 ```python
 from embedd_all.embedd.index import rag_query
@@ -102,8 +110,9 @@ def execute_rag_query():
     MAX_TOKENS = 4000
     QUERY = 'what all fuel types are there in cars?'
     SYSTEM_PROMPT = "You are a world-class document writer. Respond only with detailed descriptions and implementations. Use bullet points if necessary."
+    
+    # Using Voyage AI embeddings
     VOYAGE_EMBED_MODEL = 'voyage-2'
-
     resp = rag_query(
         temperature=TEMPERATURE,
         max_tokens=MAX_TOKENS,
@@ -115,6 +124,21 @@ def execute_rag_query():
         system_prompt=SYSTEM_PROMPT,
         voyage_api_key=VOYAGE_API_KEY,
         voyage_embed_model=VOYAGE_EMBED_MODEL
+    )
+    
+    # Using OpenAI embeddings
+    OPENAI_EMBED_MODEL = 'text-embedding-3-small'
+    resp = rag_query(
+        temperature=TEMPERATURE,
+        max_tokens=MAX_TOKENS,
+        anthropic_api_key=ANTHROPIC_API_KEY,
+        claude_model=CLAUDE_MODEL,
+        index_name=INDEX_NAME,
+        pinecone_key=PINECONE_KEY,
+        query=QUERY,
+        system_prompt=SYSTEM_PROMPT,
+        openai_api_key=OPENAI_API_KEY,
+        openai_embed_model=OPENAI_EMBED_MODEL
     )
 
     for text_block in resp:
@@ -158,6 +182,18 @@ Creates RAG for documents using Voyage AI embedding models and stores them in a 
   - `vector_db_name` (str): Name of the Pinecone vector database.
   - `voyage_embed_model` (str): Name of the Voyage AI embedding model to use.
   - `embed_dimension` (int): Dimension of the embedding vectors.
+
+### `pinecone_embeddings_with_openai(paths: list, PINECONE_KEY: str, OPENAI_API_KEY: str, vector_db_name: str, openai_embed_model: str, embed_dimension: int)`
+
+Creates RAG for documents using OpenAI embedding models and stores them in a Pinecone vector database. Supports various document formats including xlsx, csv, pdf, doc, and docx.
+
+- **Parameters:**
+  - `paths` (list): List of paths to documents.
+  - `PINECONE_KEY` (str): Pinecone API key.
+  - `OPENAI_API_KEY` (str): OpenAI API key.
+  - `vector_db_name` (str): Name of the Pinecone vector database.
+  - `openai_embed_model` (str): Name of the OpenAI embedding model to use (e.g., 'text-embedding-3-small' or 'text-embedding-3-large').
+  - `embed_dimension` (int): Dimension of the embedding vectors (1536 for small, 3072 for large model).
 
 ### `rag_query()`
 
