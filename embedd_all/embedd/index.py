@@ -16,6 +16,7 @@ import voyageai
 from enum import Enum
 from embedd_all.core.logger import logger
 from docx import Document
+from openai import OpenAI
 
 
 class FileType(Enum):
@@ -33,6 +34,8 @@ def check_file_type(filepath):
         return "CSV"
     elif file_extension.lower() == '.docx':
         return "DOCX"
+    elif file_extension.lower() == '.json':
+        return "JSON"
     else:
         return "Unknown format"
     
@@ -46,6 +49,52 @@ def check_metadata_size(metadata, limit=8000):
     """
     metadata_size = len(json.dumps(metadata).encode('utf-8'))
     return metadata_size > limit
+
+def process_files_to_texts(paths):
+    base_path = ''
+    for path in paths:
+        file_type = check_file_type(path)
+        file_path = base_path + path
+        texts = []
+
+        if file_type == "PDF":
+            logger.info(f"PDF processing started ... {path}")
+            texts = process_pdf(file_path)
+            logger.info(f"PDF processing complete ... {path}")
+
+        if file_type == "XLSX":
+            context = "data"
+            logger.info(f"EXCEL processing started ... {path}")
+            dfs = modify_excel_for_embedding(file_path=file_path, context=context)
+            texts = [text for df in dfs for text in df]
+            logger.info(f"EXCEL processing complete ... {path}")
+        
+        if file_type == "CSV":
+            logger.info(f"CSV processing started ... {path}")
+            context = "data"
+            dfs = modify_csv_for_embedding(file_path=file_path, context=context)
+            texts = [text for df in dfs for text in df]
+            logger.info("fCSV processing complete ... {path}")
+
+        if file_type == "DOCX":
+            logger.info(f"DOCX processing started ... {path}")
+            texts = read_docx_as_pages(file_path)
+            logger.info(f"DOCX processing complete ... {path}")
+        
+        if file_type == "JSON":
+            logger.info(f"JSON processing started ... {path}")
+            texts = read_json_and_prepare_text_for_embedding(file_path)
+            logger.info(f"JSON processing complete ... {path}")
+
+    return texts
+
+def convert_files_to_context(paths):
+    texts = process_files_to_texts(paths)
+    context = ''
+    for text in texts:
+        context = context + text
+
+    return context
 
 
 
@@ -165,6 +214,8 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
 
     base_path = ''
 
+    texts = []
+
     for path in paths:
         file_type = check_file_type(path)
         file_path = base_path + path
@@ -193,6 +244,11 @@ def pinecone_embeddings_with_voyage_ai(paths, pinecone_key, voyage_api_key, vect
             logger.info(f"DOCX processing started ... {path}")
             texts = read_docx_as_pages(file_path)
             logger.info(f"DOCX processing complete ... {path}")
+        
+        if file_type == "JSON":
+            logger.info(f"JSON processing started ... {path}")
+            texts = read_json_and_prepare_text_for_embedding(file_path)
+            logger.info(f"JSON processing complete ... {path}")
 
         if not texts:
             logger.info(f"No texts extracted from {path}. Skipping embedding process.")
@@ -342,3 +398,226 @@ def read_docx_as_pages(file_path):
         pages.append("\n".join(current_page))
 
     return pages
+
+
+def read_and_prepare_text_for_embedding(file_path):
+    """
+    Reads a file from the given file path and processes it into an array of text segments
+    suitable for input into an embedding model.
+
+    Args:
+    - file_path (str): The path to the file to be processed.
+
+    Returns:
+    - List[str]: A list of text segments ready for embedding.
+    """
+
+    # Initialize an empty list to store processed text segments
+    text_segments = []
+
+    try:
+        # Open the file. Ensure the file encoding is specified for consistent results.
+        with open(file_path, 'r', encoding='utf-8') as file:
+            # Read the entire content of the file
+            content = file.read()
+
+            # Optionally clean or preprocess the text (e.g., remove unwanted characters, extra spaces)
+            # This step is highly dependent on the specific requirements or data characteristics.
+            # For instance: content = content.replace('\n', ' ').strip()
+
+            # Split content into segments for embeddings; this could be based on length or delimiters.
+            # Here, we'll assume that we split the content by sentences. You may use libraries like nltk.
+            sentences = content.split('.')
+            
+            # Pre-process and filter each segment if necessary
+            for sentence in sentences:
+                cleaned_sentence = sentence.strip()  # Remove extra spaces
+
+                # Optional: only add sentences that are not empty
+                if cleaned_sentence:
+                    text_segments.append(cleaned_sentence)
+
+    except FileNotFoundError:
+        print(f"Error: The file at {file_path} was not found.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+    # Return list of text segments
+    return text_segments
+
+def read_json_and_prepare_text_for_embedding(file_path):
+    """
+    Reads a JSON file from a given file path and extracts text content into an array of text segments
+    suitable for input into an embedding model.
+
+    Args:
+    - file_path (str): The path to the JSON file to be processed.
+
+    Returns:
+    - List[str]: A list of text segments ready for embedding.
+    """
+
+    # Initialize an empty list to store text segments
+    text_segments = []
+
+    try:
+        # Open the JSON file
+        with open(file_path, 'r', encoding='utf-8') as file:
+            # Load the content of the file into a Python object (usually a dict or list)
+            data = json.load(file)
+
+            # Extract text fields from the JSON data
+            # Assume that text content is at the top level or navigate through keys as needed
+            # For example, if the text is under a "text" key in a dictionary:
+            if isinstance(data, dict):
+                # You may need to adjust the key name(s) according to the JSON structure
+                text_content = data.get('text', '')
+
+                # Optionally, if 'text' is a string, split and prepare it
+                if isinstance(text_content, str):
+                    sentences = text_content.split('.')  # Split into sentences
+                    for sentence in sentences:
+                        cleaned_sentence = sentence.strip()
+                        if cleaned_sentence:
+                            text_segments.append(cleaned_sentence)
+            
+            # Other structural forms like list of dictionaries should also be handled
+            elif isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict):
+                        text_content = item.get('text', '')
+                        if isinstance(text_content, str):
+                            sentences = text_content.split('.')
+                            for sentence in sentences:
+                                cleaned_sentence = sentence.strip()
+                                if cleaned_sentence:
+                                    text_segments.append(cleaned_sentence)
+
+    except FileNotFoundError:
+        print(f"Error: The file at {file_path} was not found.")
+    except json.JSONDecodeError:
+        print("Error: File is not a valid JSON.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+    # Return list of text segments
+    return text_segments
+
+def create_embeddings_openai(texts, openai_api_key, openai_embed_model="text-embedding-3-small"):
+    """
+    Create embeddings using OpenAI's embedding models.
+    
+    Args:
+        texts (List[str]): List of text segments to embed
+        openai_api_key (str): OpenAI API key
+        openai_embed_model (str): OpenAI embedding model name
+        
+    Returns:
+        List: List of embeddings
+    """
+    
+    client = OpenAI(api_key=openai_api_key)
+    embeddings_list = []
+    
+    batch_size = 20
+    for i in range(0, len(texts), batch_size):
+        batch = texts[i:i+batch_size]
+        try:
+            response = client.embeddings.create(
+                model=openai_embed_model,
+                input=batch,
+                encoding_format="float"
+            )
+            embeddings_list.extend([embedding.embedding for embedding in response.data])
+        except Exception as e:
+            logger.error(f"Error creating embeddings for batch {i}: {str(e)}")
+            continue
+            
+    return embeddings_list
+
+def pinecone_embeddings_with_openai(
+    paths, 
+    pinecone_key, 
+    openai_api_key, 
+    vector_db_name, 
+    openai_embed_model="text-embedding-3-small",
+    embed_dimension=1536,  # Default for OpenAI text-embedding-3-small
+    system_prompt="You are a helpful assistant."
+):
+    """
+    Create embeddings using OpenAI and store in Pinecone vector database
+    
+    Args:
+        paths (List[str]): List of file paths to process
+        pinecone_key (str): Pinecone API key
+        openai_api_key (str): OpenAI API key
+        vector_db_name (str): Name for the Pinecone vector database
+        openai_embed_model (str): OpenAI embedding model name
+        embed_dimension (int): Embedding dimension (depends on model)
+        system_prompt (str): System prompt for chat completions
+    """
+    pc = Pinecone(api_key=pinecone_key)
+
+    cloud = 'aws'
+    region = 'us-east-1'
+    spec = ServerlessSpec(cloud=cloud, region=region)
+
+    # Initialize or get existing index
+    if vector_db_name not in pc.list_indexes().names():
+        pc.create_index(
+            vector_db_name,
+            dimension=embed_dimension,
+            metric='cosine',
+            spec=spec
+        )
+        while not pc.describe_index(vector_db_name).status['ready']:
+            time.sleep(1)
+
+    pc_index = pc.Index(vector_db_name)
+    pc_index.describe_index_stats()
+
+    for path in paths:
+        file_type = check_file_type(path)
+        file_path = path
+        texts = []
+
+        # Process different file types (reusing existing code)
+        if file_type == "PDF":
+            logger.info(f"PDF processing started ... {path}")
+            texts = process_pdf(file_path)
+        elif file_type == "XLSX":
+            logger.info(f"EXCEL processing started ... {path}")
+            dfs = modify_excel_for_embedding(file_path=file_path, context="data")
+            texts = [text for df in dfs for text in df]
+        elif file_type == "CSV":
+            logger.info(f"CSV processing started ... {path}")
+            dfs = modify_csv_for_embedding(file_path=file_path, context="data")
+            texts = [text for df in dfs for text in df]
+        elif file_type == "DOCX":
+            logger.info(f"DOCX processing started ... {path}")
+            texts = read_docx_as_pages(file_path)
+        elif file_type == "JSON":
+            logger.info(f"JSON processing started ... {path}")
+            texts = read_json_and_prepare_text_for_embedding(file_path)
+
+        if not texts:
+            logger.info(f"No texts extracted from {path}. Skipping embedding process.")
+            continue
+
+        # Create embeddings using OpenAI
+        embeddings = create_embeddings_openai(texts, openai_api_key, openai_embed_model)
+        logger.info(f"Embeddings created: {len(embeddings)}")
+
+        # Convert to Pinecone format
+        upsert_embeds = convert_to_embedding_metadata(texts, embeddings)
+        logger.info(f"Preparing to upsert {len(upsert_embeds)} vectors")
+
+        # Batch upsert to Pinecone
+        batch_size = 5
+        for i in tqdm(range(0, len(upsert_embeds), batch_size), desc="Upserting batches"):
+            batch = upsert_embeds[i:i+batch_size]
+            pc_index.upsert(vectors=batch)
+            
+        logger.info(f"Completed processing {path}")
+
+    logger.info("All embeddings completed and stored in Pinecone")

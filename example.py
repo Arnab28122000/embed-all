@@ -1,10 +1,13 @@
-from embedd_all.embedd.index import modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
-from embedd_all.embedd.rag_query import rag_and_query, context_and_query
+from embedd_all.embedd.index import convert_files_to_context, modify_excel_for_embedding, process_pdf, pinecone_embeddings_with_voyage_ai, modify_csv_for_embedding
+from embedd_all.embedd.rag_query import context_and_query_model, rag_and_query, context_and_query
 import os
 
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
+OPEN_AI_API_KEY = os.environ['OPEN_AI_API_KEY']
 PINECONE_KEY = os.environ['PINECONE_KEY']
 VOYAGE_API_KEY = os.environ['VOYAGE_API_KEY']
+
+paths = ['/Users/arnabbhattachargya/Downloads']
 
 def create_rag_for_pdfs_excels_csvs():
     # paths = ['/Users/arnabbhattachargya/Desktop/flamingo_english_book.pdf', '/Users/arnabbhattachargya/Desktop/Data_Train.xlsx', '/Users/arnabbhattachargya/Downloads/flamingo book.docx']
@@ -25,6 +28,85 @@ def query_with_context():
        Medicine related context
     """
     answer = context_and_query(ANTHROPIC_API_KEY, SYSTEM_PROMPT, CLAUDE_MODEL, QUERY, MAX_TOKENS, TEMPERATURE, CONTEXT)
+    print(answer)
+
+def query_with_context_file():
+    paths = ["/Users/arnabbhattachargya/Downloads/Framekode API v1.pdf"]
+    file_context = convert_files_to_context(paths)
+    MODEL = "gpt-4o-mini"
+    SYSTEM_PROMPT = """
+        You are a world-class CRUD API expert. 
+        You will be given an API doc a you have to verify and separate fetch, payment, validate and token or auth requests in the form of an array.
+        "data": [
+            {
+                "id": 0,
+                "request_type": "POST" this can be GET, POST, PUT, DELETE etc,
+                "base_url": "",
+                "params": "",
+                "headers": JSON Type,
+                "payload": JSON Type,
+                "proof_of_truth": string type // What part of the given context was used to generate this object,
+                "curl": request curl
+                ""
+            },
+            {
+                "id": 1,
+                "request_type": "POST" this can be GET, POST, PUT, DELETE etc,
+                "base_url": "",
+                "params": "",
+                "headers": JSON Type,
+                "payload": JSON Type,
+                "proof_of_truth": string type // What part of the given context was used to generate this object,
+                "curl": request curl
+                ""
+            }
+        ]
+
+    """
+    TEMPERATURE = 0
+    MAX_TOKENS = 2000
+    QUERY = """
+         Here is the API doc that may contain fetch payment validate and token APIs. 
+        Output JSON in this format
+        "data": [
+            {
+                "id": 0,
+                "request_type": "POST" this can be GET, POST, PUT, DELETE etc,
+                "base_url": "",
+                "params": "",
+                "headers": JSON Type,
+                "payload": JSON Type,
+                "proof_of_truth": string type // What part of the given context was used to generate this object,
+                "curl": request curl
+                ""
+            },
+            {
+                "id": 1,
+                "request_type": "POST" this can be GET, POST, PUT, DELETE etc,
+                "base_url": "",
+                "params": "",
+                "headers": JSON Type,
+                "payload": JSON Type,
+                "proof_of_truth": string type // What part of the given context was used to generate this object,
+                "curl": request curl
+                ""
+            }
+        ]
+    """
+    CONTEXT = """
+    """
+    CONTEXT = CONTEXT + file_context
+    api_key = OPEN_AI_API_KEY
+    answer = context_and_query_model(
+        api_key=api_key, 
+        ai="OPENAI", 
+        system_prompt=SYSTEM_PROMPT, 
+        model=MODEL, 
+        query=QUERY, 
+        max_tokens=MAX_TOKENS, 
+        temperature=TEMPERATURE, 
+        context=CONTEXT
+    )
     print(answer)
 
 
@@ -73,6 +155,7 @@ if __name__ == '__main__':
     # texts = [text for df in dfs for text in df]
     # print("Length: ", len(texts))
     # print(df[0][0])
-    create_rag_for_pdfs_excels_csvs()
+    # create_rag_for_pdfs_excels_csvs()
+    query_with_context_file()
     # create_rag_for_pdfs()
     # query_with_context()
